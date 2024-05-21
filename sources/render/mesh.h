@@ -7,19 +7,14 @@
 
 struct Mesh
 {
-  const uint32_t vertexArrayBufferObject;
-  const int numIndices;
+    const uint32_t vertexArrayBufferObject;
+    const int numIndices;
 
-  struct Bone
-  {
-      std::string name;
-      int parentId;
-      glm::mat4x4 bindPose, invBindPose;
-  };
+    std::vector<glm::mat4> invBindPose;
+    std::vector<glm::mat4> bindPose;
+    std::map<std::string, int> nodeToBoneMap;
 
-  std::vector<Bone> bones;
-
-  Mesh(uint32_t vertexArrayBufferObject, int numIndices) :
+    Mesh(uint32_t vertexArrayBufferObject, int numIndices) :
     vertexArrayBufferObject(vertexArrayBufferObject),
     numIndices(numIndices)
     {}
@@ -27,7 +22,6 @@ struct Mesh
 
 using MeshPtr = std::shared_ptr<Mesh>;
 
-MeshPtr load_mesh(const char *path, int idx);
 MeshPtr make_plane_mesh();
 
 MeshPtr make_mesh(const std::vector<uint32_t>& indices, const std::vector<vec3>& vertices, const std::vector<vec3>& normals);
