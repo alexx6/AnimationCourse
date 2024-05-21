@@ -40,6 +40,11 @@ VSInheritEnvironments.txt
 *.ilk
 *.pdb
 build.ninja
+.vscode/
+.vs/
+Builds/
+LibsStorage/
+resources/
 
 FileContentIndex/
 v17/
