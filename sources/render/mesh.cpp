@@ -7,6 +7,7 @@
 #include <log.h>
 #include "glad/glad.h"
 
+#pragma clang optimize off
 
 static void create_indices(const std::vector<unsigned int> &indices)
 {
@@ -103,34 +104,57 @@ MeshPtr create_mesh(const aiMesh *mesh)
       uv[i] = to_vec2(mesh->mTextureCoords[0][i]);
   }
 
-  if (mesh->HasBones())
-  {
-    weights.resize(numVert, vec4(0.f));
-    weightsIndex.resize(numVert);
-    int numBones = mesh->mNumBones;
-    std::vector<int> weightsOffset(numVert, 0);
-    for (int i = 0; i < numBones; i++)
+    if (mesh->HasBones())
     {
-      const aiBone *bone = mesh->mBones[i];
-      //bonesMap[std::string(bone->mName.C_Str())] = i;
+        weights.resize(numVert, vec4(0.f));
+        weightsIndex.resize(numVert);
+        int numBones = mesh->mNumBones;
+        std::vector<int> weightsOffset(numVert, 0);
+        for (int i = 0; i < numBones; i++)
+        {
+            const aiBone *bone = mesh->mBones[i];
 
-      for (unsigned j = 0; j < bone->mNumWeights; j++)
-      {
-        int vertex = bone->mWeights[j].mVertexId;
-        int offset = weightsOffset[vertex]++;
-        weights[vertex][offset] = bone->mWeights[j].mWeight;
-        weightsIndex[vertex][offset] = i;
-      }
+            for (unsigned j = 0; j < bone->mNumWeights; j++)
+            {
+            int vertex = bone->mWeights[j].mVertexId;
+            int offset = weightsOffset[vertex]++;
+            weights[vertex][offset] = bone->mWeights[j].mWeight;
+            weightsIndex[vertex][offset] = i;
+            }
+        }
+        //the sum of weights not 1
+        for (int i = 0; i < numVert; i++)
+        {
+            vec4 w = weights[i];
+            float s = w.x + w.y + w.z + w.w;
+            weights[i] *= 1.f / s;
+        }
     }
-    //the sum of weights not 1
-    for (int i = 0; i < numVert; i++)
+
+    auto meshPtr = create_mesh(indices, vertices, normals, uv, weights, weightsIndex);
+
+    if (mesh->HasBones())
     {
-      vec4 w = weights[i];
-      float s = w.x + w.y + w.z + w.w;
-      weights[i] *= 1.f / s;
+        int numBones = mesh->mNumBones;
+        meshPtr->bones.resize(numBones);
+        for (int i = 0; i < numBones; i++)
+        {
+            const aiBone* bone = mesh->mBones[i];
+            assert(bone->mNode != nullptr);
+
+            std::cout << i << ") bone name " << bone->mName.C_Str() << " node name" << bone->mNode->mName.C_Str() << std::endl;
+            //("%d) bone name %s node name %s", i, );
+            //bonesMap[std::string(bone->mName.C_Str())] = i;
+            //glm::mat4x4 mTransformation = glm::make_mat4x4(&bone->mNode->mTransformation.a1);
+            glm::mat4x4 mOffsetMatrix = glm::make_mat4x4(&bone->mOffsetMatrix.a1);
+            mOffsetMatrix = glm::transpose(mOffsetMatrix);
+            meshPtr->bones[i].invBindPose = mOffsetMatrix;
+            meshPtr->bones[i].bindPose = glm::inverse(mOffsetMatrix);
+            meshPtr->bones[i].name = bone->mName.C_Str();
+        }
     }
-  }
-  return create_mesh(indices, vertices, normals, uv, weights, weightsIndex);
+
+    return meshPtr;
 }
 
 MeshPtr load_mesh(const char *path, int idx)
@@ -141,7 +165,7 @@ MeshPtr load_mesh(const char *path, int idx)
   importer.SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, 1.f);
 
   importer.ReadFile(path, aiPostProcessSteps::aiProcess_Triangulate | aiPostProcessSteps::aiProcess_LimitBoneWeights |
-    aiPostProcessSteps::aiProcess_GenNormals | aiProcess_GlobalScale | aiProcess_FlipWindingOrder);
+      aiPostProcessSteps::aiProcess_GenNormals | aiProcess_GlobalScale | aiProcess_FlipWindingOrder | aiProcess_PopulateArmatureData);
 
   const aiScene* scene = importer.GetScene();
   if (!scene)
@@ -159,6 +183,12 @@ void render(const MeshPtr &mesh)
   glDrawElementsBaseVertex(GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT, 0, 0);
 }
 
+void render(const MeshPtr& mesh, int count)
+{
+    glBindVertexArray(mesh->vertexArrayBufferObject);
+    glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT, 0, count, 0);
+}
+
 MeshPtr make_plane_mesh()
 {
   std::vector<uint32_t> indices = {0,1,2,0,2,3};
@@ -166,4 +196,9 @@ MeshPtr make_plane_mesh()
   std::vector<vec3> normals(4, vec3(0,1,0));
   std::vector<vec2> uv = {vec2(0,0), vec2(1,0), vec2(1,1), vec2(0,1)};
   return create_mesh(indices, vertices, normals, uv);
+}
+
+MeshPtr make_mesh(const std::vector<uint32_t>& indices, const std::vector<vec3>& vertices, const std::vector<vec3>& normals)
+{
+    return create_mesh(indices, vertices, normals);
 }
