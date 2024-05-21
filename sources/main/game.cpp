@@ -99,11 +99,14 @@ void render_character(const Character &character, const mat4 &cameraProjView, ve
 
   render(character.mesh);
 
+
   for (const auto& bone : character.mesh->bones)
   {
-      draw_arrow(bone.bindPose, vec3(0), vec3(0.1f, 0, 0), vec3(1, 0, 0), 0.01f);
-      draw_arrow(bone.bindPose, vec3(0), vec3(0, 0.1f, 0), vec3(0, 1, 0), 0.01f);
-      draw_arrow(bone.bindPose, vec3(0), vec3(0, 0, 0.1f), vec3(0, 0, 1), 0.01f);
+      draw_arrow(bone.bindPose, vec3(0), vec3(0.03f, 0, 0), vec3(1, 0, 0), 0.001f);
+      draw_arrow(bone.bindPose, vec3(0), vec3(0, 0.03f, 0), vec3(0, 1, 0), 0.001f);
+      draw_arrow(bone.bindPose, vec3(0), vec3(0, 0, 0.03f), vec3(0, 0, 1), 0.001f);
+
+      draw_arrow(bone.bindPose[3], character.mesh->bones[bone.parentId].bindPose[3], vec3(0.5, 0.9, 0.7), 0.02f);
   }
 }
 

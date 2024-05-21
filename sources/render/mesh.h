@@ -13,6 +13,7 @@ struct Mesh
   struct Bone
   {
       std::string name;
+      int parentId;
       glm::mat4x4 bindPose, invBindPose;
   };
 

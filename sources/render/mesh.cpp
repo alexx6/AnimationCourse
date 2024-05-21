@@ -142,7 +142,7 @@ MeshPtr create_mesh(const aiMesh *mesh)
             const aiBone* bone = mesh->mBones[i];
             assert(bone->mNode != nullptr);
 
-            std::cout << i << ") bone name " << bone->mName.C_Str() << " node name" << bone->mNode->mName.C_Str() << std::endl;
+            std::cout << i << ") bone name " << bone->mName.C_Str() << " node name " << bone->mNode->mName.C_Str() << std::endl;
             //("%d) bone name %s node name %s", i, );
             //bonesMap[std::string(bone->mName.C_Str())] = i;
             //glm::mat4x4 mTransformation = glm::make_mat4x4(&bone->mNode->mTransformation.a1);
@@ -151,9 +151,15 @@ MeshPtr create_mesh(const aiMesh *mesh)
             meshPtr->bones[i].invBindPose = mOffsetMatrix;
             meshPtr->bones[i].bindPose = glm::inverse(mOffsetMatrix);
             meshPtr->bones[i].name = bone->mName.C_Str();
+
+            if (bone->mNode->mParent && strcmp(bone->mNode->mParent->mName.C_Str(), "Root"))
+            {
+                int id = 0;
+                for (; strcmp(mesh->mBones[id]->mName.C_Str(), bone->mNode->mParent->mName.C_Str()) != 0; ++id) {};
+                meshPtr->bones[i].parentId = id;
+            }
         }
     }
-
     return meshPtr;
 }
 
