@@ -22,6 +22,14 @@ struct UserCamera
   ArcballCamera arcballCamera;
 };
 
+
+struct AnimationSettings
+{
+    bool isLooping = false;
+    bool isPlaying = false;
+    float playbackSpeed = 1.0f;
+};
+
 struct Character
 {
   glm::mat4 transform;
@@ -42,6 +50,8 @@ struct Character
 
   AnimationPtr currentAnimation;
   float animTime = 0;
+
+  AnimationSettings animationSettings;
 };
 
 struct Scene
@@ -142,9 +152,33 @@ void game_update()
     {
         if (character.currentAnimation)
         {
-            character.animTime += get_delta_time();
+            if (!character.animationSettings.isPlaying)
+                continue;
+
+            character.animTime += get_delta_time() * character.animationSettings.playbackSpeed;
+
             if (character.animTime >= character.currentAnimation->duration())
-                character.animTime = 0;
+            {
+                if (character.animationSettings.isLooping)
+                {
+                    character.animTime = 0.0f;
+                }
+                else
+                {
+                    character.animTime = character.currentAnimation->duration();
+                }
+            }
+            else if (character.animTime <= 0)
+            {
+                if (character.animationSettings.isLooping)
+                {
+                    character.animTime = character.currentAnimation->duration();
+                }
+                else
+                {
+                    character.animTime = 0.0f;
+                }
+            }
 
             // Samples optimized animation at t = animation_time_.
             ozz::animation::SamplingJob sampling_job;
@@ -290,7 +324,7 @@ void imgui_render()
         }
         ImGui::End();
 
-        if (ImGui::Begin("Animation list"))
+        if (ImGui::Begin("Animation control"))
         {
             std::vector<const char*> animations(animationList.size() + 1);
             animations[0] = "None";
@@ -310,6 +344,21 @@ void imgui_render()
                 character.currentAnimation = animation;
                 character.animTime = 0;
             }
+
+            if (ImGui::Button(character.animationSettings.isPlaying ? "Pause" : "Play", {250, 20}))
+            {
+                character.animationSettings.isPlaying ^= 1;
+            }
+
+            ImGui::Checkbox("Loop", &character.animationSettings.isLooping);
+            ImGui::SliderFloat("Animation time", &character.animTime, 0.0f, character.currentAnimation ? character.currentAnimation->duration() : 0.0f);
+            ImGui::SliderFloat("Playback speed", &character.animationSettings.playbackSpeed, -3.0f, 3.0f);
+
+            if (ImGui::Button("Reset playback speed", { 250, 20 }))
+            {
+                character.animationSettings.playbackSpeed = 1.0f;
+            }
+
         }
 
         ImGui::End();
