@@ -11,6 +11,10 @@
 #include <assimp/scene.h>
 #include "render/scene.h"
 #include "log.h"
+#include "animationSettings.h"
+
+AnimationSettings animationSettings;
+MemoryStats memoryStats;
 
 void build_skeleton(ozz::animation::offline::RawSkeleton::Joint& root, const aiNode& ai_root)
 {
@@ -160,7 +164,27 @@ AnimationPtr create_animation(const aiAnimation& ai_animation, const SkeletonPtr
     // a new runtime animation instance.
     // This operation will fail and return an empty unique_ptr if the RawAnimation
     // isn't valid.
-    ozz::unique_ptr<ozz::animation::Animation> animation = builder(raw_animation);
+    ozz::unique_ptr<ozz::animation::Animation> animation;
+
+    if (animationSettings.enableOptimizations)
+    {
+        ozz::animation::offline::AnimationOptimizer animationOptimizer;
+        ozz::animation::offline::RawAnimation rawAnimationOptimized;
+        animationOptimizer.setting.tolerance = animationSettings.tolerance * 0.001;
+        animationOptimizer.setting.tolerance = animationSettings.distance * 0.001;
+        animationOptimizer(raw_animation, *skeleton, &rawAnimationOptimized);
+        animation = builder(rawAnimationOptimized);
+
+        memoryStats.optimizedSize = rawAnimationOptimized.size() / 1000;
+    }
+    else
+    {
+        animation = builder(raw_animation);
+    }
+
+    memoryStats.originalSize = raw_animation.size() / 1000;
+    memoryStats.compressedSize = animation->size() / 1000;
+
 
     // ...use the animation as you want...
 

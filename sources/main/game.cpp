@@ -13,21 +13,16 @@
 #include "ozz/animation/runtime/skeleton.h"
 #include "ozz/base/maths/simd_math.h"
 #include "ozz/base/maths/soa_transform.h"
+#include "../render/animationSettings.h"
 
+extern AnimationSettings animationSettings;
+extern MemoryStats memoryStats;
 
 struct UserCamera
 {
   glm::mat4 transform;
   mat4x4 projection;
   ArcballCamera arcballCamera;
-};
-
-
-struct AnimationSettings
-{
-    bool isLooping = false;
-    bool isPlaying = false;
-    float playbackSpeed = 1.0f;
 };
 
 struct Character
@@ -50,7 +45,7 @@ struct Character
 
   AnimationPtr currentAnimation;
   float animTime = 0;
-
+  bool needRebuild;
   AnimationSettings animationSettings;
 };
 
@@ -331,11 +326,13 @@ void imgui_render()
             for (size_t i = 0; i < animationList.size(); i++)
                 animations[i + 1] = animationList[i].c_str();
             static int item = 0;
-            if (ImGui::Combo(animations[item], &item, animations.data(), animations.size()))
+            if (ImGui::Combo(animations[item], &item, animations.data(), animations.size()) || character.needRebuild)
             {
                 AnimationPtr animation;
                 if (item > 0)
                 {
+                    animationSettings = character.animationSettings;
+
                     SceneAsset sceneAsset = load_scene(animations[item],
                         SceneAsset::LoadScene::Skeleton | SceneAsset::LoadScene::Animation);
                     if (!sceneAsset.animations.empty())
@@ -343,6 +340,7 @@ void imgui_render()
                 }
                 character.currentAnimation = animation;
                 character.animTime = 0;
+                character.needRebuild = false;
             }
 
             if (ImGui::Button(character.animationSettings.isPlaying ? "Pause" : "Play", {250, 20}))
@@ -359,6 +357,23 @@ void imgui_render()
                 character.animationSettings.playbackSpeed = 1.0f;
             }
 
+            character.needRebuild |= ImGui::Checkbox("Enable optimizations", &character.animationSettings.enableOptimizations);
+            if (character.animationSettings.enableOptimizations)
+            {
+                character.needRebuild |= ImGui::SliderFloat("Tolerance (mm)", &character.animationSettings.tolerance, 0.0f, 100.0f);
+                character.needRebuild |= ImGui::SliderFloat("Distance (mm)", &character.animationSettings.distance, 0.0f, 1000.0f);
+
+
+            }
+
+            ImGui::Text("Memory size");
+            ImGui::Text("Original: %dKB", memoryStats.originalSize);
+            if (character.animationSettings.enableOptimizations)
+            {
+                ImGui::Text("Optimized: %dKB", memoryStats.optimizedSize);
+            }
+
+            ImGui::Text("Compressed: %dKB", memoryStats.compressedSize);
         }
 
         ImGui::End();
