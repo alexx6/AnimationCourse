@@ -10,6 +10,7 @@ extern void game_render();
 extern void start_time();
 extern void update_time();
 extern void imgui_render();
+extern void close_game();
 
 typedef void *SDL_GLContext;
 
@@ -29,6 +30,8 @@ void init_application(const char *project_name, int width, int height, bool full
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   size_t window_flags = SDL_WINDOW_OPENGL;
   if (full_screen)
@@ -50,10 +53,12 @@ void init_application(const char *project_name, int width, int height, bool full
   const char *glsl_version = "#version 450";
   ImGui_ImplOpenGL3_Init(glsl_version);
   glEnable(GL_DEBUG_OUTPUT);
+  glEnable(GL_MULTISAMPLE);
 }
 
 void close_application()
 {
+  close_game();
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();

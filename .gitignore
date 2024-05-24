@@ -45,6 +45,7 @@ build.ninja
 Builds/
 LibsStorage/
 resources/
+sources/3rd_party/ozz
 
 FileContentIndex/
 v17/
